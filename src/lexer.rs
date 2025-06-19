@@ -1,0 +1,158 @@
+use std::iter::Peekable;
+
+#[derive(PartialEq, Debug)]
+enum TokenKind {
+    Plus,
+    Minus,
+    Div,
+    Mult,
+    Mod,
+    Lparen,
+    Rparen,
+    Num(String),
+    Illegal,
+}
+
+struct Token {
+    kind: TokenKind,
+    offset: u8, //NOTE: REMEMBER TO SUBTRACT 1 when using the offset
+}
+
+struct Lexer<'a> {
+    chars: Peekable<std::str::Chars<'a>>,
+    source: &'a str,
+    offset: u8,
+}
+
+impl<'a> Lexer<'a> {
+    fn new(source: &'a str) -> Self {
+        Self {
+            source,
+            chars: source.chars().peekable(),
+            offset: 0,
+        }
+    }
+
+    fn advance(&mut self) -> Option<char> {
+        while let Some(&ch) = self.chars.peek() {
+            if ch.is_whitespace() {
+                self.chars.next();
+                self.offset += 1;
+            } else {
+                break;
+            }
+        }
+        self.offset += 1;
+        self.chars.next()
+    }
+
+    fn make_token(&self, kind: TokenKind) -> Token {
+        Token {
+            kind,
+            offset: self.offset,
+        }
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut token_str = String::new();
+        let c = self.advance()?;
+        token_str.push(c);
+        match c {
+            '(' => Some(self.make_token(TokenKind::Lparen)),
+            ')' => Some(self.make_token(TokenKind::Rparen)),
+            '+' => Some(self.make_token(TokenKind::Plus)),
+            '-' => Some(self.make_token(TokenKind::Minus)),
+            '*' => Some(self.make_token(TokenKind::Mult)),
+            '/' => Some(self.make_token(TokenKind::Div)),
+            '%' => Some(self.make_token(TokenKind::Mod)),
+            '0'..='9' => {
+                while let Some(&ch) = self.chars.peek() {
+                    if ch.is_digit(10) {
+                        token_str.push(self.advance()?)
+                    } else if ch == '.' {
+                        let dot = self.advance()?;
+                        token_str.push(dot);
+                        while let Some(&c) = self.chars.peek() {
+                            if c.is_digit(10) {
+                                token_str.push(self.advance()?);
+                            } else {
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                Some(self.make_token(TokenKind::Num(token_str)))
+            }
+            _ => Some(self.make_token(TokenKind::Illegal)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lex_parens() {
+        let source = "()";
+        let mut lexer = Lexer::new(source);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Lparen);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Rparen);
+    }
+
+    #[test]
+    fn lex_nums() {
+        let source = "1 2 3 4.5 6.99";
+        let mut lexer = Lexer::new(source);
+        match_number(&mut lexer, "1".to_string());
+        match_number(&mut lexer, "2".to_string());
+        match_number(&mut lexer, "3".to_string());
+        match_number(&mut lexer, "4.5".to_string());
+        match_number(&mut lexer, "6.99".to_string());
+    }
+
+    fn match_number(lexer: &mut Lexer, num: String) {
+        let token_kind = lexer.next().unwrap().kind;
+        match token_kind {
+            TokenKind::Num(x) => assert_eq!(x, num),
+            _ => panic!("Expected a Number found {:?}", token_kind),
+        }
+    }
+
+    #[test]
+    fn lex_arithmetic_ops() {
+        let source = "+ - * / %";
+        let mut lexer = Lexer::new(source);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Plus);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Minus);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Mult);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Div);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Mod);
+    }
+
+    #[test]
+    fn test_offset() {
+        let source = "+ - * / %";
+        let mut lexer = Lexer::new(source);
+        verify_offset(&mut lexer, '+');
+        verify_offset(&mut lexer, '-');
+        verify_offset(&mut lexer, '*');
+        verify_offset(&mut lexer, '/');
+        verify_offset(&mut lexer, '%');
+    }
+
+    fn verify_offset(lexer: &mut Lexer, expected: char) {
+        let tok = lexer.next().unwrap();
+        let mut char_indices = lexer.source.char_indices();
+        let (_, ch) = char_indices.nth((tok.offset - 1) as usize).unwrap();
+        if ch != expected {
+            panic!("Expected: {expected} got {ch} at offset {}", tok.offset);
+        }
+    }
+}
