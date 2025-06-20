@@ -47,6 +47,7 @@ impl fmt::Display for Node {
 enum ParseError {
     UnexpectedToken,
     UnexpectedEof,
+    SyntaxError,
 }
 
 fn get_precedence(kind: &TokenKind) -> u8 {
@@ -63,6 +64,14 @@ fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Node, Parse
     let token = lexer.next().ok_or(ParseError::UnexpectedEof)?;
     let mut lhs = match token.kind {
         Num(_) => Node::Number(token),
+        Lparen => {
+            let expression = parse(lexer, 0)?;
+            let consumed = lexer.next().ok_or(ParseError::SyntaxError)?;
+            if consumed.kind != Rparen {
+                return Err(ParseError::SyntaxError);
+            }
+            expression
+        }
         _ => return Err(ParseError::UnexpectedToken),
     };
     loop {
@@ -70,7 +79,9 @@ fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Node, Parse
             match next_token.kind {
                 Plus | Minus | Div | Mod | Mult => {
                     let precedence = get_precedence(&next_token.kind);
-                    if precedence > prev_precedence {
+                    if precedence <= prev_precedence {
+                        break;
+                    } else {
                         let consumed_token = lexer.next().unwrap();
                         let right_node = parse(lexer, precedence)?;
                         let op_node = OperatorNode {
@@ -79,8 +90,6 @@ fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Node, Parse
                             right: Box::new(right_node),
                         };
                         lhs = Node::Operator(op_node);
-                    } else {
-                        break;
                     }
                 }
                 _ => break,
