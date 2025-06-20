@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
 #[derive(PartialEq, Debug)]
-enum TokenKind {
+pub enum TokenKind {
     Plus,
     Minus,
     Div,
@@ -13,19 +13,19 @@ enum TokenKind {
     Illegal,
 }
 
-struct Token {
-    kind: TokenKind,
-    offset: u8, //NOTE: REMEMBER TO SUBTRACT 1 when using the offset
+pub struct Token {
+    pub kind: TokenKind,
+    pub offset: u8, //NOTE: REMEMBER TO SUBTRACT 1 when using the offset
 }
 
-struct Lexer<'a> {
+pub struct Lexer<'a> {
     chars: Peekable<std::str::Chars<'a>>,
     source: &'a str,
     offset: u8,
 }
 
 impl<'a> Lexer<'a> {
-    fn new(source: &'a str) -> Self {
+    pub fn new(source: &'a str) -> Self {
         Self {
             source,
             chars: source.chars().peekable(),
