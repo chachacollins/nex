@@ -1,50 +1,73 @@
 use crate::lexer::{Lexer, Token, TokenKind};
 use std::fmt;
 use std::iter::Peekable;
+use std::str::FromStr;
 
-trait Nodes: fmt::Display {}
+pub trait Node: fmt::Display {}
 
-struct OperatorNode<T: Nodes> {
-    op: Token,
-    left: Box<T>,
-    right: Box<T>,
+pub struct OperatorNode<T: Node> {
+    pub op: Token,
+    pub left: Option<Box<T>>,
+    pub right: Option<Box<T>>,
 }
 
-impl<T: Nodes> Nodes for OperatorNode<T> {}
+impl<T: Node> Node for OperatorNode<T> {}
 
-impl<T: Nodes> fmt::Display for OperatorNode<T> {
+impl<T: Node> fmt::Display for OperatorNode<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.op.kind {
-            TokenKind::Plus => write!(f, "(+ {} {})", self.left, self.right),
-            TokenKind::Minus => write!(f, "(- {} {})", self.left, self.right),
-            TokenKind::Div => write!(f, "(/ {} {})", self.left, self.right),
-            TokenKind::Mult => write!(f, "(* {} {})", self.left, self.right),
-            TokenKind::Mod => write!(f, "(% {} {})", self.left, self.right),
+            TokenKind::Plus => write!(
+                f,
+                "(+ {} {})",
+                self.left.as_ref().unwrap(),
+                self.right.as_ref().unwrap()
+            ),
+            TokenKind::Minus => write!(
+                f,
+                "(- {} {})",
+                self.left.as_ref().unwrap(),
+                self.right.as_ref().unwrap()
+            ),
+            TokenKind::Div => write!(
+                f,
+                "(/ {} {})",
+                self.left.as_ref().unwrap(),
+                self.right.as_ref().unwrap()
+            ),
+            TokenKind::Mult => write!(
+                f,
+                "(* {} {})",
+                self.left.as_ref().unwrap(),
+                self.right.as_ref().unwrap()
+            ),
+            TokenKind::Mod => write!(
+                f,
+                "(% {} {})",
+                self.left.as_ref().unwrap(),
+                self.right.as_ref().unwrap()
+            ),
             _ => unreachable!(),
         }
     }
 }
 
-enum Node {
-    Number(Token),
-    Operator(OperatorNode<Node>),
+pub enum Nodes {
+    Number(f64),
+    Operator(OperatorNode<Nodes>),
 }
 
-impl Nodes for Node {}
-impl fmt::Display for Node {
+impl Node for Nodes {}
+impl fmt::Display for Nodes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Node::Number(t) => match &t.kind {
-                TokenKind::Num(x) => write!(f, "{}", x),
-                _ => unreachable!(),
-            },
-            Node::Operator(op) => op.fmt(f),
+            Nodes::Number(num) => write!(f, "{}", num),
+            Nodes::Operator(op) => op.fmt(f),
         }
     }
 }
 
 #[derive(Debug)]
-enum ParseError {
+pub enum ParserError {
     UnexpectedToken,
     UnexpectedEof,
     SyntaxError,
@@ -59,20 +82,20 @@ fn get_precedence(kind: &TokenKind) -> u8 {
     }
 }
 
-fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Node, ParseError> {
+pub fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Nodes, ParserError> {
     use TokenKind::*;
-    let token = lexer.next().ok_or(ParseError::UnexpectedEof)?;
+    let token = lexer.next().ok_or(ParserError::UnexpectedEof)?;
     let mut lhs = match token.kind {
-        Num(_) => Node::Number(token),
+        Num(num) => Nodes::Number(f64::from_str(&num).map_err(|_| ParserError::SyntaxError)?),
         Lparen => {
             let expression = parse(lexer, 0)?;
-            let consumed = lexer.next().ok_or(ParseError::SyntaxError)?;
+            let consumed = lexer.next().ok_or(ParserError::SyntaxError)?;
             if consumed.kind != Rparen {
-                return Err(ParseError::SyntaxError);
+                return Err(ParserError::SyntaxError);
             }
             expression
         }
-        _ => return Err(ParseError::UnexpectedToken),
+        _ => return Err(ParserError::UnexpectedToken),
     };
     loop {
         if let Some(next_token) = lexer.peek() {
@@ -86,10 +109,10 @@ fn parse(lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Node, Parse
                         let right_node = parse(lexer, precedence)?;
                         let op_node = OperatorNode {
                             op: consumed_token,
-                            left: Box::new(lhs),
-                            right: Box::new(right_node),
+                            left: Some(Box::new(lhs)),
+                            right: Some(Box::new(right_node)),
                         };
-                        lhs = Node::Operator(op_node);
+                        lhs = Nodes::Operator(op_node);
                     }
                 }
                 _ => break,
@@ -108,7 +131,7 @@ mod test {
     fn parse_int() {
         let source = "1";
         let lexer = Lexer::new(&source);
-        let parsed: Node = parse(&mut lexer.peekable(), 0).unwrap();
+        let parsed: Nodes = parse(&mut lexer.peekable(), 0).unwrap();
         assert_eq!(parsed.to_string(), "1");
     }
 
@@ -116,7 +139,7 @@ mod test {
     fn parse_expr() {
         let source = "3 * 2 + 1";
         let lexer = Lexer::new(&source);
-        let parsed: Node = parse(&mut lexer.peekable(), 0).unwrap();
+        let parsed: Nodes = parse(&mut lexer.peekable(), 0).unwrap();
         assert_eq!(parsed.to_string(), "(+ (* 3 2) 1)");
     }
 }

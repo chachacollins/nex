@@ -1,7 +1,7 @@
 use crate::stack::{Stack, Value};
-use std::io::Write;
+use std::fmt::Write;
 
-enum Opcode {
+pub enum Opcode {
     Add,
     Sub,
     Div,
@@ -11,26 +11,18 @@ enum Opcode {
     Ret,
 }
 
-type Chunk = Vec<Opcode>;
+pub type Chunk = Vec<Opcode>;
 
-struct Vm {
+pub struct Vm {
     chunk: Chunk,
     stack: Stack,
     ip: usize,
 }
 
 #[derive(Debug)]
-enum VmError {
+pub enum VmError {
     OverflowChunk,
     StackError,
-}
-
-fn write_result<W: Write>(writer: &mut W, value: Value) -> std::io::Result<()> {
-    writeln!(writer, "{}", value)
-}
-
-fn print_result(value: Value) {
-    write_result(&mut std::io::stdout(), value).unwrap();
 }
 
 //TODO: Fix error handling
@@ -48,14 +40,16 @@ macro_rules! binary_op {
 
 //TODO: proper error handling
 impl Vm {
-    fn new(chunk: Chunk) -> Self {
+    pub fn new(chunk: Chunk) -> Self {
+        assert!(chunk.len() > 0);
         Self {
             chunk,
             stack: Stack::new(),
             ip: 0,
         }
     }
-    fn run(&mut self) -> Result<(), VmError> {
+    pub fn eval(&mut self) -> Result<String, VmError> {
+        let mut result = String::new();
         use Opcode::*;
         if self.ip >= self.chunk.len() {
             return Err(VmError::OverflowChunk);
@@ -73,12 +67,13 @@ impl Vm {
                     self.stack.push(*x).unwrap();
                 }
                 Ret => {
-                    print_result(self.stack.pop().unwrap());
+                    write!(&mut result, "{}", self.stack.pop().unwrap())
+                        .expect("Failed to write to result buffer");
                     break;
                 }
             }
         }
-        Ok(())
+        Ok(result)
     }
 }
 
@@ -86,14 +81,57 @@ impl Vm {
 mod test {
     use super::*;
 
+    macro_rules! define_op {
+        ($chunk: expr, $op_code: expr) => {
+            $chunk.push(Opcode::Num(20.));
+            $chunk.push(Opcode::Num(10.));
+            $chunk.push($op_code);
+            $chunk.push(Opcode::Ret);
+        };
+    }
+
     #[test]
-    fn test_vm() {
+    fn test_vm_add() {
         let mut chunk = Chunk::new();
-        chunk.push(Opcode::Num(10.));
-        chunk.push(Opcode::Num(10.1));
-        chunk.push(Opcode::Add);
-        chunk.push(Opcode::Ret);
+        define_op!(chunk, Opcode::Add);
         let mut vm = Vm::new(chunk);
-        vm.run().unwrap();
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "30");
+    }
+
+    #[test]
+    fn test_vm_sub() {
+        let mut chunk = Chunk::new();
+        define_op!(chunk, Opcode::Sub);
+        let mut vm = Vm::new(chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "10");
+    }
+
+    #[test]
+    fn test_vm_div() {
+        let mut chunk = Chunk::new();
+        define_op!(chunk, Opcode::Div);
+        let mut vm = Vm::new(chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "2");
+    }
+
+    #[test]
+    fn test_vm_mult() {
+        let mut chunk = Chunk::new();
+        define_op!(chunk, Opcode::Mult);
+        let mut vm = Vm::new(chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "200");
+    }
+
+    #[test]
+    fn test_vm_mod() {
+        let mut chunk = Chunk::new();
+        define_op!(chunk, Opcode::Mod);
+        let mut vm = Vm::new(chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "0");
     }
 }
