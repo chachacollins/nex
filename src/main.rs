@@ -14,9 +14,9 @@ fn repl() -> Result<()> {
         stdout().flush().unwrap();
         match stdin().read_line(&mut source) {
             Ok(_) => {
-                let chunk = compiler::compile(source)?;
-                let mut vm = Vm::new(chunk);
-                let result = vm.eval().unwrap();
+                let chunk = compiler::compile(source.clone())?;
+                let mut vm = Vm::new(source, chunk);
+                let result = vm.eval()?;
                 println!("{result}")
             }
             Err(error) => println!("error: {error}"),

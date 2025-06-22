@@ -1,5 +1,5 @@
 use crate::lexer::{Lexer, Token, TokenKind};
-use miette::{Diagnostic, SourceSpan};
+use miette::{Diagnostic, Result, SourceSpan};
 use std::fmt;
 use std::iter::Peekable;
 use std::str::FromStr;
@@ -54,7 +54,7 @@ impl<T: Node> fmt::Display for OperatorNode<T> {
 }
 
 pub enum Nodes {
-    Number(f64),
+    Number(u8, f64),
     Operator(OperatorNode<Nodes>),
 }
 
@@ -62,7 +62,7 @@ impl Node for Nodes {}
 impl fmt::Display for Nodes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Nodes::Number(num) => write!(f, "{}", num),
+            Nodes::Number(_, num) => write!(f, "{}", num),
             Nodes::Operator(op) => op.fmt(f),
         }
     }
@@ -112,15 +112,17 @@ struct UnexpectedToken {
 #[diagnostic(help("try writing an expression"))]
 struct UnexpectedEof {}
 
-use miette::Result;
 pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Nodes> {
     use TokenKind::*;
     let token = lexer.next().ok_or(UnexpectedEof {})?;
     let mut lhs = match token.kind {
-        Num(num) => Nodes::Number(f64::from_str(&num).map_err(|_| NumParseError {
-            src: src.to_string(),
-            bad_bit: ((token.offset - 1) as usize, 1).into(),
-        })?),
+        Num(num) => Nodes::Number(
+            token.offset,
+            f64::from_str(&num).map_err(|_| NumParseError {
+                src: src.to_string(),
+                bad_bit: ((token.offset - 1) as usize, 1).into(),
+            })?,
+        ),
         Lparen => {
             let expression = parse(src, lexer, 0)?;
             let consumed = lexer.next().ok_or(UnclosedBracket {
