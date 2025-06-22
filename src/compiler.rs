@@ -3,7 +3,7 @@ use crate::parser;
 use crate::vm::{Chunk, Opcode, Vm};
 
 #[derive(Debug)]
-enum CompilerError {
+pub enum CompilerError {
     ParserError(parser::ParserError),
 }
 
