@@ -6,14 +6,15 @@ mod parser;
 mod stack;
 mod vm;
 
-fn repl() -> ! {
+use miette::Result;
+fn repl() -> Result<()> {
     loop {
         let mut source = String::new();
         print!(">> ");
         stdout().flush().unwrap();
         match stdin().read_line(&mut source) {
             Ok(_) => {
-                let chunk = compiler::compile(source).unwrap();
+                let chunk = compiler::compile(source)?;
                 let mut vm = Vm::new(chunk);
                 let result = vm.eval().unwrap();
                 println!("{result}")
@@ -23,6 +24,7 @@ fn repl() -> ! {
     }
 }
 
-fn main() {
-    repl();
+fn main() -> Result<()> {
+    repl()?;
+    Ok(())
 }

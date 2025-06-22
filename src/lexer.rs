@@ -16,12 +16,14 @@ pub enum TokenKind {
 pub struct Token {
     pub kind: TokenKind,
     pub offset: u8, //NOTE: REMEMBER TO SUBTRACT 1 when using the offset
+    pub len: u8,
 }
 
 pub struct Lexer<'a> {
     chars: Peekable<std::str::Chars<'a>>,
-    source: &'a str,
+    pub source: &'a str,
     offset: u8,
+    len: u8,
 }
 
 impl<'a> Lexer<'a> {
@@ -30,6 +32,7 @@ impl<'a> Lexer<'a> {
             source,
             chars: source.chars().peekable(),
             offset: 0,
+            len: 1,
         }
     }
 
@@ -43,14 +46,18 @@ impl<'a> Lexer<'a> {
             }
         }
         self.offset += 1;
+        self.len += 1;
         self.chars.next()
     }
 
-    fn make_token(&self, kind: TokenKind) -> Token {
-        Token {
+    fn make_token(&mut self, kind: TokenKind) -> Token {
+        let token = Token {
             kind,
             offset: self.offset,
-        }
+            len: self.len,
+        };
+        self.len = 0;
+        token
     }
 }
 

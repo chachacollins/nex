@@ -2,11 +2,6 @@ use crate::lexer::{Lexer, TokenKind};
 use crate::parser;
 use crate::vm::{Chunk, Opcode, Vm};
 
-#[derive(Debug)]
-pub enum CompilerError {
-    ParserError(parser::ParserError),
-}
-
 fn traverse_and_compile(nodes: parser::Nodes, chunk: &mut Chunk) {
     use parser::Nodes::*;
     match nodes {
@@ -30,18 +25,14 @@ fn traverse_and_compile(nodes: parser::Nodes, chunk: &mut Chunk) {
     }
 }
 
-pub fn compile(source: String) -> Result<Chunk, CompilerError> {
-    let mut lexer = Lexer::new(&source);
-    let ast = parser::parse(&mut lexer.peekable(), 0);
-    match ast {
-        Ok(nodes) => {
-            let mut chunk = Chunk::new();
-            traverse_and_compile(nodes, &mut chunk);
-            chunk.push(Opcode::Ret);
-            Ok(chunk)
-        }
-        Err(parser_error) => Err(CompilerError::ParserError(parser_error)),
-    }
+use miette::Result;
+pub fn compile(source: String) -> Result<Chunk> {
+    let lexer = Lexer::new(&source);
+    let ast = parser::parse(lexer.source, &mut lexer.peekable(), 0)?;
+    let mut chunk = Chunk::new();
+    traverse_and_compile(ast, &mut chunk);
+    chunk.push(Opcode::Ret);
+    Ok(chunk)
 }
 
 #[cfg(test)]
