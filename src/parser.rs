@@ -99,7 +99,7 @@ struct NumParseError {
 
 #[derive(Error, Debug, Diagnostic)]
 #[error("Unexpected Token!")]
-#[diagnostic(help("Enter help command for a list of valid operators"))]
+#[diagnostic(help("Enter help command for a list of valid operations"))]
 struct UnexpectedToken {
     #[source_code]
     src: String,
@@ -108,8 +108,8 @@ struct UnexpectedToken {
 }
 
 #[derive(Error, Debug, Diagnostic)]
-#[error("Unexpected Eof!")]
-#[diagnostic(help("try writing an expression"))]
+#[error("Error: Unexpected Eof!")]
+#[diagnostic(help("try writing complete expression(type help for more info)"))]
 struct UnexpectedEof {}
 
 pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Result<Nodes> {
@@ -120,19 +120,19 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
             token.offset,
             f64::from_str(&num).map_err(|_| NumParseError {
                 src: src.to_string(),
-                bad_bit: ((token.offset - 1) as usize, 1).into(),
+                bad_bit: ((token.offset - num.len() as u8) as usize, num.len()).into(),
             })?,
         ),
         Lparen => {
             let expression = parse(src, lexer, 0)?;
             let consumed = lexer.next().ok_or(UnclosedBracket {
                 src: src.to_string(),
-                bad_bit: ((token.offset - 1) as usize, token.len as usize).into(),
+                bad_bit: ((token.offset - 1) as usize, 1).into(),
             })?;
             if consumed.kind != Rparen {
                 return Err(UnclosedBracket {
                     src: src.to_string(),
-                    bad_bit: ((token.offset - 1) as usize, token.len as usize).into(),
+                    bad_bit: ((token.offset - 1) as usize, 1).into(),
                 })?;
             }
             expression
@@ -140,7 +140,7 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
         _ => {
             return Err(UnexpectedToken {
                 src: src.to_string(),
-                bad_bit: ((token.offset - 1) as usize, token.len as usize).into(),
+                bad_bit: ((token.offset - 1) as usize, 1).into(),
             })?;
         }
     };

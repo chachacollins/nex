@@ -43,9 +43,10 @@ macro_rules! binary_op {
         if stringify!($op) == "/" {
             if b == 0. {
                 let span = offset_b - offset_a;
+                let a_len = (a.log(10.0) + 1.0).abs() as u8;
                 return Err(DivByZero {
                     src: $self.src.to_string(),
-                    bad_bit: ((offset_a - 1) as usize, span as usize).into()
+                    bad_bit: ((offset_a - a_len) as usize, (span + a_len) as usize).into()
                 })?
             }
         }
