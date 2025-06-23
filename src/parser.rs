@@ -55,6 +55,7 @@ impl<T: Node> fmt::Display for OperatorNode<T> {
 
 pub enum Nodes {
     Number(u8, f64),
+    Negative(Box<Nodes>),
     Operator(OperatorNode<Nodes>),
 }
 
@@ -63,16 +64,18 @@ impl fmt::Display for Nodes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Nodes::Number(_, num) => write!(f, "{}", num),
+            Nodes::Negative(node) => write!(f, "-{}", node),
             Nodes::Operator(op) => op.fmt(f),
         }
     }
 }
 
-fn get_precedence(kind: &TokenKind) -> u8 {
+fn get_precedence(kind: &TokenKind) -> (u8, u8) {
     use TokenKind::*;
     match kind {
-        Plus | Minus | Mod => 1,
-        Mult | Div => 2,
+        Plus | Mod => (0, 1),
+        Minus => (3, 1),
+        Mult | Div => (0, 2),
         _ => unreachable!(),
     }
 }
@@ -137,6 +140,11 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
             }
             expression
         }
+        Minus => {
+            let (prefix, _) = get_precedence(&TokenKind::Minus);
+            let expression = parse(src, lexer, prefix)?;
+            Nodes::Negative(Box::new(expression))
+        }
         _ => {
             return Err(UnexpectedToken {
                 src: src.to_string(),
@@ -148,7 +156,7 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
         if let Some(next_token) = lexer.peek() {
             match next_token.kind {
                 Plus | Minus | Div | Mod | Mult => {
-                    let precedence = get_precedence(&next_token.kind);
+                    let (_, precedence) = get_precedence(&next_token.kind);
                     if precedence <= prev_precedence {
                         break;
                     } else {
@@ -188,5 +196,13 @@ mod test {
         let lexer = Lexer::new(&source);
         let parsed: Nodes = parse(lexer.source, &mut lexer.peekable(), 0).unwrap();
         assert_eq!(parsed.to_string(), "(+ (* 3 2) 1)");
+    }
+
+    #[test]
+    fn parse_negative() {
+        let source = "-3 + 2";
+        let lexer = Lexer::new(&source);
+        let parsed: Nodes = parse(lexer.source, &mut lexer.peekable(), 0).unwrap();
+        assert_eq!(parsed.to_string(), "(+ -3 2)");
     }
 }

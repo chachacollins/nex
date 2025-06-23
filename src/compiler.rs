@@ -23,6 +23,10 @@ fn traverse_and_compile(nodes: parser::Nodes, chunk: &mut Chunk) {
                 _ => unreachable!(),
             }
         }
+        parser::Nodes::Negative(node) => {
+            traverse_and_compile(*node, chunk);
+            chunk.push(Opcode::Neg)
+        }
     }
 }
 
@@ -41,11 +45,20 @@ mod test {
     use crate::Vm;
 
     #[test]
-    fn test_compiler() {
+    fn test_compilation_reg() {
         let source = "(1 + 2) * 3";
         let chunk = compile(source.to_string()).unwrap();
         let mut vm = Vm::new(source.to_string(), chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "9");
+    }
+
+    #[test]
+    fn test_compilation_neg() {
+        let source = "-(3 + 2)";
+        let chunk = compile(source.to_string()).unwrap();
+        let mut vm = Vm::new(source.to_string(), chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "-5");
     }
 }
