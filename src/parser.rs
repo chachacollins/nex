@@ -56,6 +56,7 @@ impl<T: Node> fmt::Display for OperatorNode<T> {
 pub enum Nodes {
     Number(u8, f64),
     Negative(Box<Nodes>),
+    Positive(Box<Nodes>),
     Operator(OperatorNode<Nodes>),
 }
 
@@ -65,6 +66,7 @@ impl fmt::Display for Nodes {
         match self {
             Nodes::Number(_, num) => write!(f, "{}", num),
             Nodes::Negative(node) => write!(f, "-{}", node),
+            Nodes::Positive(node) => write!(f, "+{}", node),
             Nodes::Operator(op) => op.fmt(f),
         }
     }
@@ -73,7 +75,8 @@ impl fmt::Display for Nodes {
 fn get_precedence(kind: &TokenKind) -> (u8, u8) {
     use TokenKind::*;
     match kind {
-        Plus | Mod => (0, 1),
+        Plus => (3, 1),
+        Mod => (0, 1),
         Minus => (3, 1),
         Mult | Div => (0, 2),
         _ => unreachable!(),
@@ -145,6 +148,11 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
             let expression = parse(src, lexer, prefix)?;
             Nodes::Negative(Box::new(expression))
         }
+        Plus => {
+            let (prefix, _) = get_precedence(&TokenKind::Plus);
+            let expression = parse(src, lexer, prefix)?;
+            Nodes::Positive(Box::new(expression))
+        }
         _ => {
             return Err(UnexpectedToken {
                 src: src.to_string(),
@@ -199,10 +207,18 @@ mod test {
     }
 
     #[test]
-    fn parse_negative() {
+    fn parse_negative_pref() {
         let source = "-3 + 2";
         let lexer = Lexer::new(&source);
         let parsed: Nodes = parse(lexer.source, &mut lexer.peekable(), 0).unwrap();
         assert_eq!(parsed.to_string(), "(+ -3 2)");
+    }
+
+    #[test]
+    fn parse_pos_pref() {
+        let source = "+(-3 + 2)";
+        let lexer = Lexer::new(&source);
+        let parsed: Nodes = parse(lexer.source, &mut lexer.peekable(), 0).unwrap();
+        assert_eq!(parsed.to_string(), "+(+ -3 2)");
     }
 }

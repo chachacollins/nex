@@ -8,7 +8,9 @@ pub enum Opcode {
     Sub,
     Div,
     Mult,
+    Nop,
     Mod,
+    Neg,
     Num(u8, f64),
     Ret,
 }
@@ -79,6 +81,10 @@ impl Vm {
                 Mult => binary_op!(self, *),
                 Mod => binary_op!(self, %),
                 Div => binary_op!(self, /),
+                Neg => {
+                    let (offset, num) = self.stack.pop()?;
+                    self.stack.push((offset, num * -1.0))?;
+                }
                 Num(offset, num) => {
                     self.stack.push((*offset, *num))?;
                 }
@@ -87,6 +93,7 @@ impl Vm {
                     write!(&mut result, "{}", ret).expect("Failed to write to result buffer");
                     break;
                 }
+                Nop => (),
             }
         }
         Ok(result)

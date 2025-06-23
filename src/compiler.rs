@@ -27,6 +27,10 @@ fn traverse_and_compile(nodes: parser::Nodes, chunk: &mut Chunk) {
             traverse_and_compile(*node, chunk);
             chunk.push(Opcode::Neg)
         }
+        parser::Nodes::Positive(node) => {
+            traverse_and_compile(*node, chunk);
+            chunk.push(Opcode::Nop);
+        }
     }
 }
 
@@ -60,5 +64,14 @@ mod test {
         let mut vm = Vm::new(source.to_string(), chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "-5");
+    }
+
+    #[test]
+    fn test_compilation_pos() {
+        let source = "+(3 + 2)";
+        let chunk = compile(source.to_string()).unwrap();
+        let mut vm = Vm::new(source.to_string(), chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "5");
     }
 }
