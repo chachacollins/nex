@@ -34,8 +34,8 @@ fn traverse_and_compile(nodes: parser::Nodes, chunk: &mut Chunk) {
     }
 }
 
-pub fn compile(source: String) -> Result<Chunk> {
-    let lexer = Lexer::new(&source);
+pub fn compile(source: &str) -> Result<Chunk> {
+    let lexer = Lexer::new(source);
     let ast = parser::parse(lexer.source, &mut lexer.peekable(), 0)?;
     let mut chunk = Chunk::new();
     traverse_and_compile(ast, &mut chunk);

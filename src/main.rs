@@ -1,3 +1,4 @@
+use miette::Result;
 use std::io::{Write, stdin, stdout};
 use vm::Vm;
 mod compiler;
@@ -6,7 +7,6 @@ mod parser;
 mod stack;
 mod vm;
 
-use miette::Result;
 fn repl() -> Result<()> {
     const GREEN: &str = "\x1b[32m";
     const RED: &str = "\x1b[31m";
@@ -19,28 +19,30 @@ fn repl() -> Result<()> {
         } else {
             print!("{}>>{} ", RED, RESET);
         }
-        stdout().flush().unwrap();
-        match stdin().read_line(&mut source) {
-            Ok(_) => match compiler::compile(source.clone()) {
-                Ok(chunk) => {
-                    let mut vm = Vm::new(source, chunk);
-                    match vm.eval() {
-                        Ok(result) => {
-                            println!("{result}");
-                            success = true;
-                        }
-                        Err(error) => {
-                            eprintln!("{:?}", error);
-                            success = false;
-                        }
+        stdout().flush().expect(
+            "This should never fail and if it does there is no point in continuing the application",
+        );
+        stdin().read_line(&mut source).expect(
+            "This should normally never fail and if it does there is no point in continuing the application",
+        );
+        match compiler::compile(&source) {
+            Ok(chunk) => {
+                let mut vm = Vm::new(source, chunk);
+                match vm.eval() {
+                    Ok(result) => {
+                        println!("{result}");
+                        success = true;
+                    }
+                    Err(error) => {
+                        eprintln!("{:?}", error);
+                        success = false;
                     }
                 }
-                Err(error) => {
-                    eprintln!("{:?}", error);
-                    success = false;
-                }
-            },
-            Err(error) => println!("error: {error}"),
+            }
+            Err(error) => {
+                eprintln!("{:?}", error);
+                success = false;
+            }
         }
     }
 }
