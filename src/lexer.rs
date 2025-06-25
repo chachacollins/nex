@@ -7,9 +7,17 @@ pub enum TokenKind {
     Div,
     Mult,
     Mod,
+    Equal,
     Lparen,
     Rparen,
     Num(String),
+    Ident(String),
+    Var,
+    Sin,
+    Cos,
+    Tan,
+    Log,
+    Pow,
     Illegal,
 }
 
@@ -46,16 +54,26 @@ impl<'a> Lexer<'a> {
         self.chars.next()
     }
 
-    fn make_token(&mut self, kind: TokenKind) -> Token {
-        let token = Token {
+    fn make_token(&self, kind: TokenKind) -> Token {
+        Token {
             kind,
             offset: self.offset,
-        };
-        token
+        }
+    }
+
+    fn match_ident(&self, ident: &str) -> TokenKind {
+        match ident {
+            "sin" => TokenKind::Sin,
+            "cos" => TokenKind::Cos,
+            "tan" => TokenKind::Tan,
+            "log" => TokenKind::Log,
+            "pow" => TokenKind::Pow,
+            _ => TokenKind::Ident(ident.to_string()),
+        }
     }
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Iterator for Lexer<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -70,15 +88,27 @@ impl<'a> Iterator for Lexer<'a> {
             '*' => Some(self.make_token(TokenKind::Mult)),
             '/' => Some(self.make_token(TokenKind::Div)),
             '%' => Some(self.make_token(TokenKind::Mod)),
+            '$' => Some(self.make_token(TokenKind::Var)),
+            '=' => Some(self.make_token(TokenKind::Equal)),
+            'a'..='z' | 'A'..='Z' | '_' => {
+                while let Some(&ch) = self.chars.peek() {
+                    if ch.is_alphanumeric() || ch == '_' {
+                        token_str.push(self.advance()?)
+                    } else {
+                        break;
+                    }
+                }
+                Some(self.make_token(self.match_ident(&token_str)))
+            }
             '0'..='9' => {
                 while let Some(&ch) = self.chars.peek() {
-                    if ch.is_digit(10) {
+                    if ch.is_ascii_digit() {
                         token_str.push(self.advance()?)
                     } else if ch == '.' {
                         let dot = self.advance()?;
                         token_str.push(dot);
                         while let Some(&c) = self.chars.peek() {
-                            if c.is_digit(10) {
+                            if c.is_ascii_digit() {
                                 token_str.push(self.advance()?);
                             } else {
                                 break;
@@ -135,6 +165,22 @@ mod tests {
         assert_eq!(lexer.next().unwrap().kind, TokenKind::Mult);
         assert_eq!(lexer.next().unwrap().kind, TokenKind::Div);
         assert_eq!(lexer.next().unwrap().kind, TokenKind::Mod);
+    }
+
+    #[test]
+    fn lex_idents_and_var() {
+        let source = "pow sin cos tan $hello = ";
+        let mut lexer = Lexer::new(source);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Pow);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Sin);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Cos);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Tan);
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Var);
+        assert_eq!(
+            lexer.next().unwrap().kind,
+            TokenKind::Ident("hello".to_string())
+        );
+        assert_eq!(lexer.next().unwrap().kind, TokenKind::Equal);
     }
 
     #[test]
