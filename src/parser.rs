@@ -136,7 +136,7 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
                 bad_bit: ((token.offset - 1) as usize, 1).into(),
             })?;
             if consumed.kind != Rparen {
-                return Err(UnclosedBracket {
+                Err(UnclosedBracket {
                     src: src.to_string(),
                     bad_bit: ((token.offset - 1) as usize, 1).into(),
                 })?;
@@ -160,29 +160,25 @@ pub fn parse(src: &str, lexer: &mut Peekable<Lexer>, prev_precedence: u8) -> Res
             })?;
         }
     };
-    loop {
-        if let Some(next_token) = lexer.peek() {
-            match next_token.kind {
-                Plus | Minus | Div | Mod | Mult => {
-                    let (_, precedence) = get_precedence(&next_token.kind);
-                    if precedence <= prev_precedence {
-                        break;
-                    } else {
-                        let consumed_token = lexer.next().unwrap();
-                        let right_node = parse(src, lexer, precedence)?;
-                        let op_node = OperatorNode {
-                            op: consumed_token,
-                            left: Some(Box::new(lhs)),
-                            right: Some(Box::new(right_node)),
-                        };
-                        lhs = Nodes::Operator(op_node);
-                    }
+    while let Some(next_token) = lexer.peek() {
+        match next_token.kind {
+            Plus | Minus | Div | Mod | Mult => {
+                let (_, precedence) = get_precedence(&next_token.kind);
+                if precedence <= prev_precedence {
+                    break;
+                } else {
+                    let consumed_token = lexer.next().unwrap();
+                    let right_node = parse(src, lexer, precedence)?;
+                    let op_node = OperatorNode {
+                        op: consumed_token,
+                        left: Some(Box::new(lhs)),
+                        right: Some(Box::new(right_node)),
+                    };
+                    lhs = Nodes::Operator(op_node);
                 }
-                _ => break,
             }
-        } else {
-            break;
-        };
+            _ => break,
+        }
     }
     Ok(lhs)
 }

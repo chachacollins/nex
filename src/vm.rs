@@ -42,7 +42,7 @@ macro_rules! binary_op {
     ($self: expr, $op:tt) => {{
         let (offset_b, b) = $self.stack.pop()?;
         let (offset_a, a)= $self.stack.pop()?;
-        if stringify!($op) == "/" {
+        if stringify!($op) == "/" || stringify!($op) == "%" {
             if b == 0. {
                 let span = offset_b - offset_a;
                 let a_len = (a.log(10.0) + 1.0).abs() as u8;
@@ -58,7 +58,7 @@ macro_rules! binary_op {
 
 impl Vm {
     pub fn new(source: String, chunk: Chunk) -> Self {
-        assert!(chunk.len() > 0);
+        assert!(!chunk.is_empty());
         Self {
             chunk,
             stack: Stack::new(),
@@ -114,7 +114,7 @@ mod test {
     }
 
     #[test]
-    fn test_vm_add() {
+    fn vm_add() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Add);
         let mut vm = Vm::new("20 + 10".to_string(), chunk);
@@ -123,7 +123,7 @@ mod test {
     }
 
     #[test]
-    fn test_vm_sub() {
+    fn vm_sub() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Sub);
         let mut vm = Vm::new("20 - 10".to_string(), chunk);
@@ -132,7 +132,7 @@ mod test {
     }
 
     #[test]
-    fn test_vm_div() {
+    fn vm_div() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Div);
         let mut vm = Vm::new("20 / 10".to_string(), chunk);
@@ -141,7 +141,7 @@ mod test {
     }
 
     #[test]
-    fn test_vm_mult() {
+    fn vm_mult() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Mult);
         let mut vm = Vm::new("20 * 10".to_string(), chunk);
@@ -150,11 +150,21 @@ mod test {
     }
 
     #[test]
-    fn test_vm_mod() {
+    fn vm_mod() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Mod);
         let mut vm = Vm::new("20 % 10".to_string(), chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "0");
+    }
+    #[test]
+    fn vm_neg() {
+        let mut chunk = Chunk::new();
+        chunk.push(Opcode::Num(0, 20.));
+        chunk.push(Opcode::Neg);
+        chunk.push(Opcode::Ret);
+        let mut vm = Vm::new("-20".to_string(), chunk);
+        let result = vm.eval().unwrap();
+        assert_eq!(result, "-20");
     }
 }

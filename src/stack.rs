@@ -24,7 +24,7 @@ struct StackOverflow {}
 struct StackUnderflow {}
 
 impl Stack {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             items: [(0, 0.0); 1024],
             stack_top: 0,
@@ -41,7 +41,7 @@ impl Stack {
     }
 
     pub fn pop(&mut self) -> Result<Value> {
-        if self.stack_top <= 0 {
+        if self.stack_top == 0 {
             return Err(StackUnderflow {})?;
         }
         self.stack_top -= 1;
@@ -54,7 +54,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_stack() {
+    fn stack_operations() {
         let mut stack = Stack::new();
         stack.push((0, 1.)).unwrap();
         stack.push((0, 2.)).unwrap();

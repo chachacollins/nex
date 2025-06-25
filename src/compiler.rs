@@ -49,7 +49,7 @@ mod test {
     use crate::Vm;
 
     #[test]
-    fn test_compilation_reg() {
+    fn reg_num_compilation() {
         let source = "(1 + 2) * 3";
         let chunk = compile(source.to_string()).unwrap();
         let mut vm = Vm::new(source.to_string(), chunk);
@@ -58,7 +58,7 @@ mod test {
     }
 
     #[test]
-    fn test_compilation_neg() {
+    fn neg_num_compilation() {
         let source = "-(3 + 2)";
         let chunk = compile(source.to_string()).unwrap();
         let mut vm = Vm::new(source.to_string(), chunk);
@@ -67,7 +67,7 @@ mod test {
     }
 
     #[test]
-    fn test_compilation_pos() {
+    fn pos_num_compilation() {
         let source = "+(3 + 2)";
         let chunk = compile(source.to_string()).unwrap();
         let mut vm = Vm::new(source.to_string(), chunk);
