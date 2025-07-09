@@ -17,11 +17,11 @@ pub enum Opcode {
 
 pub type Chunk = Vec<Opcode>;
 
-pub struct Vm {
+pub struct Vm<'a> {
     chunk: Chunk,
     stack: Stack,
     ip: usize,
-    src: String,
+    src: &'a str,
 }
 
 #[derive(Error, Debug, Diagnostic)]
@@ -56,8 +56,8 @@ macro_rules! binary_op {
     }};
 }
 
-impl Vm {
-    pub fn new(source: String, chunk: Chunk) -> Self {
+impl<'a> Vm<'a> {
+    pub fn new(source: &'a str, chunk: Chunk) -> Self {
         assert!(!chunk.is_empty());
         Self {
             chunk,
@@ -117,7 +117,7 @@ mod test {
     fn vm_add() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Add);
-        let mut vm = Vm::new("20 + 10".to_string(), chunk);
+        let mut vm = Vm::new("20 + 10", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "30");
     }
@@ -126,7 +126,7 @@ mod test {
     fn vm_sub() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Sub);
-        let mut vm = Vm::new("20 - 10".to_string(), chunk);
+        let mut vm = Vm::new("20 - 10", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "10");
     }
@@ -135,7 +135,7 @@ mod test {
     fn vm_div() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Div);
-        let mut vm = Vm::new("20 / 10".to_string(), chunk);
+        let mut vm = Vm::new("20 / 10", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "2");
     }
@@ -144,7 +144,7 @@ mod test {
     fn vm_mult() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Mult);
-        let mut vm = Vm::new("20 * 10".to_string(), chunk);
+        let mut vm = Vm::new("20 * 10", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "200");
     }
@@ -153,7 +153,7 @@ mod test {
     fn vm_mod() {
         let mut chunk = Chunk::new();
         define_op!(chunk, Opcode::Mod);
-        let mut vm = Vm::new("20 % 10".to_string(), chunk);
+        let mut vm = Vm::new("20 % 10", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "0");
     }
@@ -163,7 +163,7 @@ mod test {
         chunk.push(Opcode::Num(0, 20.));
         chunk.push(Opcode::Neg);
         chunk.push(Opcode::Ret);
-        let mut vm = Vm::new("-20".to_string(), chunk);
+        let mut vm = Vm::new("-20", chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "-20");
     }

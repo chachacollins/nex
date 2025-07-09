@@ -51,8 +51,8 @@ mod test {
     #[test]
     fn reg_num_compilation() {
         let source = "(1 + 2) * 3";
-        let chunk = compile(source.to_string()).unwrap();
-        let mut vm = Vm::new(source.to_string(), chunk);
+        let chunk = compile(&source).unwrap();
+        let mut vm = Vm::new(source, chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "9");
     }
@@ -60,8 +60,8 @@ mod test {
     #[test]
     fn neg_num_compilation() {
         let source = "-(3 + 2)";
-        let chunk = compile(source.to_string()).unwrap();
-        let mut vm = Vm::new(source.to_string(), chunk);
+        let chunk = compile(&source).unwrap();
+        let mut vm = Vm::new(source, chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "-5");
     }
@@ -69,8 +69,8 @@ mod test {
     #[test]
     fn pos_num_compilation() {
         let source = "+(3 + 2)";
-        let chunk = compile(source.to_string()).unwrap();
-        let mut vm = Vm::new(source.to_string(), chunk);
+        let chunk = compile(&source).unwrap();
+        let mut vm = Vm::new(source, chunk);
         let result = vm.eval().unwrap();
         assert_eq!(result, "5");
     }
